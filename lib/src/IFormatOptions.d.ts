@@ -3,9 +3,9 @@ import { SharpOptions, AvifOptions, GifOptions, HeifOptions, JpegOptions, PngOpt
 import IFileMetadata from "./IFileMetadata";
 export default interface IFormatOptions {
     /**
-     * Resizes the image to the given width. The height will be updated according to the image proportion (no deformations).
+     * Optional width-based resize. The height is automatically updated to preserve image proportion.
      */
-    width: number | ((metadata: IFileMetadata) => number);
+    width?: number | ((metadata: IFileMetadata) => number);
     /**
      * Options to rename your image.
      *

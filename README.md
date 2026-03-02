@@ -1,4 +1,4 @@
-# gulp-sharp-responsive
+# @elrond25/gulp-sharp
 
 A gulp plugin to process images using Sharp.
 
@@ -56,18 +56,11 @@ yarn add --dev @elrond25/gulp-sharp
 
 ## Examples
 
-All the following example uses the TS version of gulpfile. This is why you will see ES6 syntaxes like "import ...".
+All the following examples use the TypeScript version of `gulpfile` with ESM imports.
 
-If you are using the "classic" syntax (require), just convert the ES6 to CommonJS like following:
-
-```js
-// this
+```ts
 import { src, dest } from "gulp";
-import sharpResponsive from "gulp-sharp-responsive";
-
-// becomes this
-const { src, dest } = require("gulp");
-const sharpResponsive = require("gulp-sharp-responsive");
+import sharpResponsive from "@elrond25/gulp-sharp";
 ```
 
 Note that if you are using typescript, don't forget to add the "esModuleInterop" option to true in you `tsconfig.json` in order for the ES6 syntax mentioned above to work.
@@ -85,7 +78,8 @@ Note that if you are using typescript, don't forget to add the "esModuleInterop"
 - [3. Include the original file in the output images](#3-include-the-original-file-in-the-output-images)
 - [4. Pass format specific options](#4-pass-format-specific-options)
 - [5. Pass sharp specific options](#5-pass-sharp-specific-options)
-- [6. Use a callback to compute the width](#6-use-a-callback-to-compute-the-width)
+- [6. Resize images with width](#6-resize-images-with-width)
+- [7. Use a callback to compute the width](#7-use-a-callback-to-compute-the-width)
 
 ### 1. Generate image of different sizes
 
@@ -93,7 +87,7 @@ In this example, we will generate a small and large image size from an image.
 
 ```typescript
 import { src, dest } from "gulp";
-import sharpResponsive from "gulp-sharp-responsive";
+import sharpResponsive from "@elrond25/gulp-sharp";
 
 const img = () => src("src/img/**/*.{jpg,png}")
   .pipe(sharpResponsive({
@@ -107,17 +101,17 @@ const img = () => src("src/img/**/*.{jpg,png}")
 
 ### 2. Generate image of different formats
 
-In this example, we will generate modern image format like webp and avif from an image.
+In this example, we will generate modern image formats (webp and avif) from an image.
 
 ```typescript
 import { src, dest } from "gulp";
-import sharpResponsive from "gulp-sharp-responsive";
+import sharpResponsive from "@elrond25/gulp-sharp";
 
 const img = () => src("src/img/**/*.{jpg,png}")
   .pipe(sharpResponsive({
     formats: [
-      { width: 640, format: "webp" },
-      { width: 640, format: "avif" },
+      { format: "webp" },
+      { format: "avif" },
     ]
   }))
   .pipe(dest("dist/img"));
@@ -129,7 +123,7 @@ In this example, we will tell the plugin to keep the original file to be outpute
 
 ```typescript
 import { src, dest } from "gulp";
-import sharpResponsive from "gulp-sharp-responsive";
+import sharpResponsive from "@elrond25/gulp-sharp";
 
 const img = () => src("src/img/**/*.{jpg,png}")
   .pipe(sharpResponsive({
@@ -144,12 +138,12 @@ In this example, we will use JPEG options to customize how we want our image to 
 
 ```typescript
 import { src, dest } from "gulp";
-import sharpResponsive from "gulp-sharp-responsive";
+import sharpResponsive from "@elrond25/gulp-sharp";
 
 const img = () => src("src/img/**/*.{jpg,png}")
   .pipe(sharpResponsive({
     formats: [
-      { width: 640, jpegOptions: { quality: 60, progressive: true } }
+      { jpegOptions: { quality: 60, progressive: true } }
     ],
   }))
   .pipe(dest("dist/img"));
@@ -172,12 +166,12 @@ In this example, we will pass Sharp options to customize its behavior.
 
 ```typescript
 import { src, dest } from "gulp";
-import sharpResponsive from "gulp-sharp-responsive";
+import sharpResponsive from "@elrond25/gulp-sharp";
 
 const img = () => src("src/img/**/*.{jpg,png}")
   .pipe(sharpResponsive({
     formats: [
-      { width: 640, sharp: { failOnError: false, density: 340 } }
+      { sharp: { failOnError: false, density: 340 } }
     ],
   }))
   .pipe(dest("dist/img"));
@@ -185,13 +179,30 @@ const img = () => src("src/img/**/*.{jpg,png}")
 
 Find all the available options in the [Sharp constructor documentation](https://sharp.pixelplumbing.com/api-constructor#sharp).
 
-### 6. Use a callback to compute the width
+### 6. Resize images with width
+
+In this example, we resize with a fixed width.
+
+```typescript
+import { src, dest } from "gulp";
+import sharpResponsive from "@elrond25/gulp-sharp";
+
+const img = () => src("src/img/**/*.{jpg,png}")
+  .pipe(sharpResponsive({
+    formats: [
+      { width: 640 }
+    ]
+  }))
+  .pipe(dest("dist/img"));
+```
+
+### 7. Use a callback to compute the width
 
 In this example, we will use the file metadata to compute the width dynamically.
 
 ```typescript
 import { src, dest } from "gulp";
-import sharpResponsive from "gulp-sharp-responsive";
+import sharpResponsive from "@elrond25/gulp-sharp";
 
 const img = () => src("src/img/**/*.{jpg,png}")
   .pipe(sharpResponsive({
@@ -201,6 +212,8 @@ const img = () => src("src/img/**/*.{jpg,png}")
   }))
   .pipe(dest("dist/img"));
 ```
+
+Height is not configured directly. It is computed automatically to preserve the original aspect ratio when `width` is provided.
 
 ## Options
 
@@ -215,7 +228,7 @@ A list of transformations to operate on the file.
 ```typescript
 format: [
   {
-    width: number | ((metadata IFileMetadata) => number),
+    width?: number | ((metadata IFileMetadata) => number),
     format?: "jpeg" | "png" | "webp" | "gif" | "tiff" | "avif" | "heif" | "jxl",
     rename?: {
       dirname?: string,
@@ -273,6 +286,17 @@ interface IFileMetadata {
 ```
 
 ## Test
+
+The test suite runs conversion checks against **all images** in `test/misc/src/img`.
+
+For each source image, it runs **9 tests**:
+
+- 8 format conversion tests (`jpeg`, `png`, `webp`, `gif`, `tiff`, `avif`, `heif`, `jxl`)
+- 1 explicit AVIF test using `avifOptions.compression = "av1"`
+
+Tests automatically skip a conversion only when the local Sharp build does not support that output format.
+
+Tests are executed with Mocha + TypeScript via the npm script in `package.json`.
 
 ```bash
 npm run test

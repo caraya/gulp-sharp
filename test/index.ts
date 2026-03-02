@@ -91,14 +91,9 @@ beforeEach(async () => {
 
 describe("formats", () => {
 	for (const sourceImagePath of sourceImagePaths) {
-		const sourceFormat = normalizeFormatFromExtension(sourceImagePath);
 		const sourceFileName = basename(sourceImagePath);
 
 		for (const targetFormat of SUPPORTED_FORMATS) {
-			if (targetFormat === sourceFormat) {
-				continue;
-			}
-
 			it(`should convert ${sourceFileName} to ${targetFormat}`, function (done) {
 				const formatSupport = getSharpFormatSupport(targetFormat);
 
@@ -121,7 +116,6 @@ describe("formats", () => {
 								width: 40,
 								format: targetFormat,
 								rename: { suffix: `-${targetFormat}` },
-								...(targetFormat === "avif" ? { avifOptions: { compression: "av1" } as any } : {}),
 							}
 						]
 					}))
@@ -133,5 +127,35 @@ describe("formats", () => {
 					.on("error", done);
 			});
 		}
+
+		it(`should convert ${sourceFileName} to avif using av1 compression`, function (done) {
+			const formatSupport = getSharpFormatSupport("avif");
+
+			if (!formatSupport || formatSupport.output?.file !== true) {
+				this.skip();
+				return done();
+			}
+
+			const outputFileName = basename(sourceImagePath, extname(sourceImagePath));
+			const outputPath = `${DEST_DIR}/${outputFileName}-avif-av1.avif`;
+
+			src(sourceImagePath)
+				.pipe(sharpResponsive({
+					formats: [
+						{
+							width: 40,
+							format: "avif",
+							rename: { suffix: "-avif-av1" },
+							avifOptions: { compression: "av1" } as any,
+						}
+					]
+				}))
+				.pipe(dest(DEST_DIR))
+				.on("finish", () => {
+					expect(existsSync(outputPath)).to.be.true;
+					done();
+				})
+				.on("error", done);
+		});
 	}
 });
