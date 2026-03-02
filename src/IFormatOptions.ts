@@ -70,6 +70,13 @@ export default interface IFormatOptions {
 	heifOptions?: HeifOptions;
 
 	/**
+	 * JPEG XL optimizations options.
+	 *
+	 * @see https://sharp.pixelplumbing.com/api-output#jxl
+	 */
+	jxlOptions?: object;
+
+	/**
 	 * Sharp specific options for the image being processed.
 	 *
 	 * @see https://sharp.pixelplumbing.com/api-constructor#sharp

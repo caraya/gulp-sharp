@@ -10,171 +10,205 @@ import imageSize from "image-size";
 
 const getError = (error: string | Error): PluginError => new PluginError("gulp-sharp-responsive", error);
 
-/**
- * @credits https://www.npmjs.com/package/file-extension Had to copy the source code because TS would not let me import it (no commonJS nor ES6 exports).
- */
 const getFileExtension = (path: string): string => {
-	let extension = (/[^./\\]*$/.exec(path) || [""])[0];
+  let extension = (/[^./\\]*$/.exec(path) || [""])[0];
 
-	if (extension === "jpg") {
-		extension = "jpeg";
-	}
+  if (extension === "jpg") {
+    extension = "jpeg";
+  }
 
-	return extension.toLowerCase();
+  return extension.toLowerCase();
 };
 
-const getFormat = (filePath: string, format?: FileFormat): string => {
-	if (typeof format === "string") {
-		return format;
-	}
+const getFormat = (filePath: string, format?: string): string => {
+  if (typeof format === "string") {
+    return format;
+  }
 
-	return getFileExtension(filePath);
+  return getFileExtension(filePath);
 };
 
-const formatIsValid = (format: string): boolean => ["jpeg", "png", "webp", "gif", "tiff", "avif", "heif"].includes(format);
+const formatIsValid = (format: string): boolean =>
+  ["jpeg", "png", "webp", "gif", "tiff", "avif", "heif", "jxl"].includes(format);
+
+const getHeifOptions = (option: IFormatOptions): object => {
+  if (typeof option.heifOptions === "object" && option.heifOptions !== null) {
+    return option.heifOptions as object;
+  }
+
+  const avifOptions = (option as any).avifOptions;
+
+  if (
+    typeof avifOptions === "object" &&
+    avifOptions !== null &&
+    (avifOptions as any).compression === "av1"
+  ) {
+    return avifOptions as object;
+  }
+
+  return { compression: "hevc" };
+};
 
 const addImageOptimizationStep = (promise: Sharp, format: string, option: IFormatOptions): Sharp => {
-	let updatedPromise = promise;
+  let updatedPromise = promise;
 
-	if (format === "jpeg" && option.jpegOptions !== null && option.jpegOptions !== undefined && typeof option.jpegOptions === "object") {
-		updatedPromise.jpeg(option.jpegOptions);
-	}
+  if (format === "jpeg" && typeof option.jpegOptions === "object" && option.jpegOptions !== null) {
+    updatedPromise.jpeg(option.jpegOptions);
+  }
 
-	if (format === "png" && option.pngOptions !== null && option.pngOptions !== undefined && typeof option.pngOptions === "object") {
-		updatedPromise.png(option.pngOptions);
-	}
+  if (format === "png" && typeof option.pngOptions === "object" && option.pngOptions !== null) {
+    updatedPromise.png(option.pngOptions);
+  }
 
-	if (format === "webp" && option.webpOptions !== null && option.webpOptions !== undefined && typeof option.webpOptions === "object") {
-		updatedPromise.webp(option.webpOptions);
-	}
+  if (format === "webp" && typeof option.webpOptions === "object" && option.webpOptions !== null) {
+    updatedPromise.webp(option.webpOptions);
+  }
 
-	if (format === "gif" && option.gifOptions !== null && option.gifOptions !== undefined && typeof option.gifOptions === "object") {
-		// @ts-ignore see issue https://github.com/DefinitelyTyped/DefinitelyTyped/issues/52448
-		updatedPromise.gif(option.gifOptions);
-	}
+  if (format === "gif" && typeof option.gifOptions === "object" && option.gifOptions !== null) {
+    // @ts-ignore see issue https://github.com/DefinitelyTyped/DefinitelyTyped/issues/52448
+    updatedPromise.gif(option.gifOptions);
+  }
 
-	if (format === "avif" && option.avifOptions !== null && option.avifOptions !== undefined && typeof option.avifOptions === "object") {
-		updatedPromise.avif(option.avifOptions);
-	}
+  if (format === "avif" && typeof option.avifOptions === "object" && option.avifOptions !== null) {
+    updatedPromise.avif(option.avifOptions);
+  }
 
-	if (format === "heif" && option.heifOptions !== null && option.heifOptions !== undefined && typeof option.heifOptions === "object") {
-		updatedPromise.heif(option.heifOptions);
-	}
+  if (format === "heif" && typeof option.heifOptions === "object" && option.heifOptions !== null) {
+    updatedPromise.heif(option.heifOptions);
+  }
 
-	if (format === "tiff" && option.tiffOptions !== null && option.tiffOptions !== undefined && typeof option.tiffOptions === "object") {
-		updatedPromise.tiff(option.tiffOptions);
-	}
+  if (format === "jxl" && typeof option.jxlOptions === "object" && option.jxlOptions !== null) {
+    // @ts-ignore @types/sharp may not expose jxl() yet
+    updatedPromise.jxl(option.jxlOptions);
+  }
 
-	return updatedPromise;
+  if (format === "tiff" && typeof option.tiffOptions === "object" && option.tiffOptions !== null) {
+    updatedPromise.tiff(option.tiffOptions);
+  }
+
+  return updatedPromise;
 };
 
-const updateFilePathWithDesiredFormat = (originalFilePath: string, format?: FileFormat): string => {
-	let updatedFilePath = originalFilePath;
-	const originalFileExtension = getFileExtension(originalFilePath);
+const updateFilePathWithDesiredFormat = (originalFilePath: string, format?: string): string => {
+  let updatedFilePath = originalFilePath;
+  const originalFileExtension = getFileExtension(originalFilePath);
 
-	if (typeof format === "string" && originalFileExtension !== format) {
-		updatedFilePath = rename(updatedFilePath, {
-			extname: `.${format}`,
-		}).toString();
-	}
+  if (typeof format === "string" && originalFileExtension !== format) {
+    updatedFilePath = rename(updatedFilePath, {
+      extname: `.${format}`,
+    }).toString();
+  }
 
-	return updatedFilePath;
+  return updatedFilePath;
 };
 
 export default (options: IOptions): Transform => {
-	return through2.obj(function (file, encoding, callback) {
-		if (file.isNull()) {
-			this.emit('error', getError("File is null."));
+  return through2.obj(function (file, encoding, callback) {
+    if (file.isNull()) {
+      this.emit("error", getError("File is null."));
+      return callback(null, file);
+    }
 
-			return callback(null, file);
-		}
+    if (file.isStream()) {
+      this.emit("error", getError("Streams are not supported for the moment. If you think it should, please create an issue at https://github.com/khalyomede/gulp-sharp-responsive/issues"));
+      return callback(null, file);
+    }
 
-		if (file.isStream()) {
-			this.emit('error', getError("Streams are not supported for the moment. If you think it should, please create an issue at https://github.com/khalyomede/gulp-sharp-responsive/issues"));
+    if (!file.isBuffer()) {
+      this.emit("error", getError("Expected file to be a buffer."));
+      return callback(null, file);
+    }
 
-			return callback(null, file);
-		}
+    const promises: Array<Promise<void | Buffer>> = [];
 
-		if (!file.isBuffer()) {
-			this.emit("error", getError("Expected file to be a buffer."));
+    for (const option of options.formats) {
+      const format = getFormat(file.path, option.format);
 
-			return callback(null, file);
-		}
+      if (!formatIsValid(format)) {
+        this.emit("error", getError(`${file.path}: invalid file format detected (${format}).`));
+        continue;
+      }
 
-		const promises: Array<Promise<void | Buffer>> = [];
+      let width: number | undefined;
 
-		for (const option of options.formats) {
-			const format = getFormat(file.path, option.format);
+      // Processing width if it is an anonymous function
+      if (typeof option.width === "function") {
+        const fileSize = imageSize(file.contents);
 
-			if (!formatIsValid(format)) {
-				this.emit("error", getError(`${file.path}: invalid file format detected (${format}).`));
+        if (fileSize.width === undefined || fileSize.height === undefined) {
+          this.emit("error", getError(`${file.path}: image size computation failed.`));
+          continue;
+        }
 
-				continue;
-			}
+        width = option.width({ width: fileSize.width, height: fileSize.height });
 
-			let width = 0;
+        if (typeof width !== "number") {
+          this.emit("error", getError(`${file.path}: callback must return a number.`));
+          continue;
+        }
+      } else if (typeof option.width === "number") {
+        width = option.width;
+      }
 
-			// Processing width if it's an anonymous function
-			if (typeof option.width === "function") {
-				const fileSize = imageSize(file.contents);
+      let promise = sharp(
+        file.contents,
+        typeof option.sharp === "object" && option.sharp !== null ? option.sharp : {}
+      );
 
-				if (fileSize.width === undefined) {
-					this.emit("error", getError(`${file.path}: image size computation failed.`));
+      // Make EXIF rotation optional, defaulting to true
+      // @ts-ignore assuming autoRotate is added to the interface
+      if (option.autoRotate !== false) {
+        promise = promise.rotate();
+      }
 
-					continue;
-				}
+      // Safely apply resize only when a valid width exists
+      if (width !== undefined && width > 0) {
+        promise = promise.resize(width);
+      }
 
-				if (fileSize.height === undefined) {
-					this.emit("error", getError(`${file.path}: image size computation failed.`));
+      if (format === "heif") {
+        promise = promise.heif(
+          // @ts-ignore @types/sharp may be outdated for heif options
+          getHeifOptions(option)
+        );
+      } else {
+        // @ts-ignore FormatEnum from Sharp does not accept strings, but documentation shows it accepts...
+        promise = promise.toFormat(format);
+      }
+      promise = addImageOptimizationStep(promise, format, option);
 
-					continue;
-				}
+      let filePath = file.path;
 
-				width = option.width({ width: fileSize.width, height: fileSize.height });
+      if (option.rename) {
+        if (typeof option.rename.extname === "string") {
+          this.emit("error", getError(`${file.path}: detected rename.extname option, but it is insecure since this plugin takes care of the output file extension (changing it may compromise the result).`));
+          continue;
+        }
+        filePath = rename(filePath, option.rename).toString();
+      }
 
-				if (typeof width !== "number") {
-					this.emit("error", getError(`${file.path}: callback must return a number.`));
+      filePath = updateFilePathWithDesiredFormat(filePath, option.format);
 
-					continue;
-				}
-			} else {
-				width = option.width;
-			}
+      promises.push(
+        promise.toBuffer().then((buffer) => {
+          this.push(
+            new Vinyl({
+              base: file.base,
+              contents: buffer,
+              path: filePath,
+              // @ts-ignore internal Vinyl property
+              _cachedKey: file._cachedKey,
+            })
+          );
+        })
+      );
+    }
 
-			let promise = sharp(file.contents, option.sharp !== undefined && option.sharp !== null && typeof option.sharp === "object" ? option.sharp : {})
-				.rotate()
-				.resize(width)
-				// @ts-ignore FormatEnum from Sharp does not accepts strings, but documentation shows it accepts...
-				.toFormat(format);
-
-			promise = addImageOptimizationStep(promise, format, option);
-
-			let filePath = file.path;
-
-			if (option.rename) {
-				if (typeof option.rename.extname === "string") {
-					this.emit("error", getError(`${file.path}: detected rename.extname option, but it is insecure since this plugin take care of the output file extension (changing it may compromise the result).`));
-
-					continue;
-				}
-
-				filePath = rename(filePath, option.rename).toString();
-			}
-
-			filePath = updateFilePathWithDesiredFormat(filePath, option.format);
-
-			promises.push(promise.toBuffer().then(buffer => {
-				this.push(new Vinyl({
-					base: file.base,
-					contents: buffer,
-					path: filePath,
-					_cachedKey: file._cachedKey,
-				}));
-			}));
-		}
-
-		Promise.all(promises).then(() => {
-			callback(null, options.includeOriginalFile === true ? file : null);
-		}).catch(error => this.emit("error", getError(error)));
-	});
+    Promise.all(promises)
+      .then(() => {
+        callback(null, options.includeOriginalFile === true ? file : null);
+      })
+      .catch((error) => this.emit("error", getError(error)));
+  });
 };
+

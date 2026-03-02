@@ -7,8 +7,7 @@ export default {
 	],
 	output: {
 		file: "lib/index.js",
-		format: "cjs",
-		exports: "default",
+		format: "es",
 	},
 	external: [
 		"through2",

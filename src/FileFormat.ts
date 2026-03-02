@@ -1,1 +1,1 @@
-type FileFormat = "jpeg" | "png" | "webp" | "gif" | "tiff" | "avif" | "heif";
+type FileFormat = "jpeg" | "png" | "webp" | "gif" | "tiff" | "avif" | "heif" | "jxl";

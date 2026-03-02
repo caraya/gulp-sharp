@@ -1,8 +1,6 @@
 # gulp-sharp-responsive
 
-A gulp plugin to generate responsives images.
-
-[![Build Status](https://travis-ci.com/khalyomede/gulp-sharp-responsive.svg?branch=master)](https://travis-ci.com/khalyomede/gulp-sharp-responsive) [![npm](https://img.shields.io/npm/v/gulp-sharp-responsive)](https://www.npmjs.com/package/gulp-sharp-responsive) ![NPM](https://img.shields.io/npm/l/gulp-sharp-responsive)
+A gulp plugin to process images using Sharp.
 
 ## Summary
 
@@ -15,7 +13,7 @@ A gulp plugin to generate responsives images.
 
 ## About
 
-I make web apps and I often need to generate images of multi formats and size from a single image. For example, an image "lion.jpeg", that is declined like this:
+I make web apps and I often need to generate images of multiple formats and sizes from a single image. For example, an image "lion.jpeg", that is declined like this:
 
 - lion-sm.jpeg
 - lion-sm.webp
@@ -37,6 +35,7 @@ Sharp can do this, and since I use Gulp for my everyday tasks, I created a plugi
   - webp
   - avif
   - heif
+  - jxl
   - tiff
 - Can pass Sharp specific options to customize even more the image generation
 - Written in TypeScript, so you get type hints for the options
@@ -46,18 +45,18 @@ Sharp can do this, and since I use Gulp for my everyday tasks, I created a plugi
 In your terminal:
 
 ```bash
-npm install --save-dev gulp-sharp-responsive
+npm install --save-dev @elrond25/gulp-sharp
 ```
 
 With Yarn:
 
 ```bash
-yarn add --dev gulp-sharp-responsive
+yarn add --dev @elrond25/gulp-sharp
 ```
 
 ## Examples
 
-Sidenote: all the following example uses the TS version of gulpfile. This is why you will see ES6 syntaxes like "import ...".
+All the following example uses the TS version of gulpfile. This is why you will see ES6 syntaxes like "import ...".
 
 If you are using the "classic" syntax (require), just convert the ES6 to CommonJS like following:
 
@@ -165,6 +164,7 @@ You can pass options for various formats. Here is all supported options and thei
 - [tiffOptions](https://sharp.pixelplumbing.com/api-output#tiff)
 - [avifOptions](https://sharp.pixelplumbing.com/api-output#avif)
 - [heifOptions](https://sharp.pixelplumbing.com/api-output#heif)
+- [jxlOptions](https://sharp.pixelplumbing.com/api-output#jxl)
 
 ### 5. Pass sharp specific options
 
@@ -216,7 +216,7 @@ A list of transformations to operate on the file.
 format: [
   {
     width: number | ((metadata IFileMetadata) => number),
-    format?: "jpeg" | "png" | "webp" | "gif" | "tiff" | "avif" | "heif",
+    format?: "jpeg" | "png" | "webp" | "gif" | "tiff" | "avif" | "heif" | "jxl",
     rename?: {
       dirname?: string,
       prefix?: string,
@@ -246,6 +246,9 @@ format: [
       // ...
     },
     heifOptions?: {
+      // ...
+    },
+    jxlOptions?: {
       // ...
     },
   },
